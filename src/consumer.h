@@ -12,18 +12,20 @@ typedef struct so_consumer_ctx_t {
 	struct so_ring_buffer_t *producer_rb;
 	int fd;
 	int numConsumers;
-	int finishedCOnsumers;
+	int finishedConsumers;
     /* TODO: add synchronization primitives for timestamp ordering */
 } so_consumer_ctx_t;
 
 // used to pass remaining logs to firewall.c
 extern logInfo_t *logs;
 
+extern int nr;
+
 // used to pass remaining log cnts to firewall.c
 extern int cnt;
 
 // used to pass the fd to firewall.c
-extern int fd;
+extern so_consumer_ctx_t ctx;
 
 // used for qsort based on timers
 int cmp(const void *p1, const void *p2);

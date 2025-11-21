@@ -61,7 +61,7 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	thread_ids = calloc(num_consumers, sizeof(pthread_t));
+	thread_ids = calloc(num_consumers + 1, sizeof(pthread_t));
 	DIE(thread_ids == NULL, "calloc pthread_t");
 
 	/* create consumer threads */
@@ -71,21 +71,9 @@ int main(int argc, char **argv)
 	publish_data(&ring_buffer, argv[1]);
 
 	/* TODO: wait for child threads to finish execution*/
-	for (int i = 0 ; i < num_consumers ; i++) {
+	for (int i = 0 ; i <= threads ; i++) {
 		pthread_join(thread_ids[i], NULL);
 	}
-
-	// for the last logs, that do not make the cnt reach THRESHOLD i write them after all the other threads
-
-	char out_buf[256];
-
-	qsort(logs, cnt, sizeof(logInfo_t), cmp);
-
-			for (int i = 0 ; i < cnt ; i++) {
-				int len = snprintf(out_buf, 256, "%s %016lx %lu\n",
-				RES_TO_STR(logs[i].action), logs[i].hash, logs[i].timestamp);
-				write(fd, out_buf, len);
-			}
 
 	ring_buffer_destroy(&ring_buffer);
 
