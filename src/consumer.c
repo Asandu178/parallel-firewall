@@ -18,6 +18,8 @@ int cmp(const void *p1, const void *p2) {
 
 logInfo_t *logs = NULL;
 
+so_consumer_ctx_t ctx;
+
 int cnt = 0;
 
 int fd;
@@ -75,19 +77,17 @@ int create_consumers(pthread_t *tids,
 {
 
 	fd = open(out_filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
-	so_consumer_ctx_t *ctx = malloc(sizeof(so_consumer_ctx_t) * num_consumers);
+	ctx.fd = fd;
+	ctx.producer_rb = rb;
+	ctx.numConsumers = num_consumers;
+
 	logs = malloc(sizeof(logInfo_t) * 300);
-	if (!ctx)
-		return -1;
 
 	for (int i = 0; i < num_consumers; i++) {
 		/*
 		 * TODO: Launch consumer threads
 		 **/
-		ctx[i].fd = fd;
-		ctx[i].producer_rb = rb;	
-		ctx[i].numConsumers = num_consumers;
-		pthread_create(&tids[i], NULL, consumer_thread, &ctx[i]);
+		pthread_create(&tids[i], NULL, consumer_thread, &ctx);
 	}
 
 	return num_consumers;
