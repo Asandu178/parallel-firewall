@@ -11,34 +11,34 @@
 #include "utils.h"
 
 
-int cmp(const void *p1, const void *p2) {
-	logInfo_t a = *(logInfo_t*)p1;
-	logInfo_t b = *(logInfo_t*)p2;
-	return (a.timestamp - b.timestamp);
+int cmp(const void *p1, const void *p2)
+{
+	return ((*(logInfo_t *)p1).timestamp - (*(logInfo_t *)p2).timestamp);
 }
 
-logInfo_t *logs = NULL;
+logInfo_t *logs;
 
 so_consumer_ctx_t ctx;
 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t waitForElement = PTHREAD_COND_INITIALIZER;
 
-int cnt = 0;
+int cnt;
 
-void addLogInfo(logInfo_t log) {
+void addLogInfo(logInfo_t log)
+{
 	pthread_mutex_lock(&lock);
 
 	logs[cnt++] = log;
 
-	if (cnt == THRESHOLD) {
+	if (cnt == THRESHOLD)
 		pthread_cond_signal(&waitForElement);
-	}
 
 	pthread_mutex_unlock(&lock);
 }
 
-void* logHandler(void *argv) {
+void *logHandler(void *argv)
+{
 	size_t len;
 	char out_buf[256];
 	(void) argv;
@@ -81,7 +81,7 @@ void* logHandler(void *argv) {
 	return NULL;
 }
 
-void* consumer_thread(void *argv)
+void *consumer_thread(void *argv)
 {
 	/* TODO: implement consumer thread */
 	so_packet_t pkt;
@@ -100,6 +100,7 @@ void* consumer_thread(void *argv)
 		}
 
 		logInfo_t log;
+
 		log.action = process_packet(&pkt);
 		log.hash = packet_hash(&pkt);
 		log.timestamp = pkt.hdr.timestamp;
@@ -117,6 +118,7 @@ int create_consumers(pthread_t *tids,
 	ctx.producer_rb = rb;
 	ctx.numConsumers = num_consumers;
 	ctx.finishedConsumers = 0;
+	cnt = 0;
 
 	logs = malloc(sizeof(logInfo_t) * 300);
 
