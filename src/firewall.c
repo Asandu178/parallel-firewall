@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #include "ring_buffer.h"
 #include "consumer.h"
@@ -12,6 +13,7 @@
 #include "log/log.h"
 #include "packet.h"
 #include "utils.h"
+
 
 #define SO_RING_SZ		(PKT_SZ * 1000)
 
@@ -72,6 +74,18 @@ int main(int argc, char **argv)
 	for (int i = 0 ; i < num_consumers ; i++) {
 		pthread_join(thread_ids[i], NULL);
 	}
+
+	// for the last logs, that do not make the cnt reach THRESHOLD i write them after all the other threads
+
+	char out_buf[256];
+
+	qsort(logs, cnt, sizeof(logInfo_t), cmp);
+
+			for (int i = 0 ; i < cnt ; i++) {
+				int len = snprintf(out_buf, 256, "%s %016lx %lu\n",
+				RES_TO_STR(logs[i].action), logs[i].hash, logs[i].timestamp);
+				write(fd, out_buf, len);
+			}
 
 	ring_buffer_destroy(&ring_buffer);
 

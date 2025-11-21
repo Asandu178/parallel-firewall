@@ -9,6 +9,19 @@
 #include "packet.h"
 #include "utils.h"
 
+
+int cmp(const void *p1, const void *p2) {
+	logInfo_t a = *(logInfo_t*)p1;
+	logInfo_t b = *(logInfo_t*)p2;
+	return (a.timestamp - b.timestamp);
+}
+
+logInfo_t *logs = NULL;
+
+int cnt = 0;
+
+int fd;
+
 void consumer_thread(so_consumer_ctx_t *ctx)
 {
 	/* TODO: implement consumer thread */
@@ -26,16 +39,29 @@ void consumer_thread(so_consumer_ctx_t *ctx)
 		if (r == 0)
 			continue;
 
-		int action = process_packet(&pkt);
-		unsigned long hash = packet_hash(&pkt);
-		unsigned long timestamp = pkt.hdr.timestamp;
-
+		logInfo_t log;
+		log.action = process_packet(&pkt);
+		log.hash = packet_hash(&pkt);
+		log.timestamp = pkt.hdr.timestamp;
 
 		pthread_mutex_lock(&rb->locklog);
 
-		int len = snprintf(out_buf, 256, "%s %016lx %lu\n",
-			RES_TO_STR(action), hash, timestamp);
-		write(ctx->fd, out_buf, len);
+		logs[cnt] = log;
+		cnt = cnt + 1;
+
+		if (cnt == THRESHOLD) {
+
+			qsort(logs, THRESHOLD, sizeof(logInfo_t), cmp);
+
+			for (int i = 0 ; i < cnt ; i++) {
+				int len = snprintf(out_buf, 256, "%s %016lx %lu\n",
+				RES_TO_STR(logs[i].action), logs[i].hash, logs[i].timestamp);
+				write(ctx->fd, out_buf, len);
+			}
+
+			cnt = 0;
+
+		}
 
 		pthread_mutex_unlock(&rb->locklog);
 
@@ -48,8 +74,9 @@ int create_consumers(pthread_t *tids,
 					 const char *out_filename)
 {
 
-	int fd = open(out_filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
+	fd = open(out_filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
 	so_consumer_ctx_t *ctx = malloc(sizeof(so_consumer_ctx_t) * num_consumers);
+	logs = malloc(sizeof(logInfo_t) * 300);
 	if (!ctx)
 		return -1;
 
@@ -58,7 +85,8 @@ int create_consumers(pthread_t *tids,
 		 * TODO: Launch consumer threads
 		 **/
 		ctx[i].fd = fd;
-		ctx[i].producer_rb = rb;
+		ctx[i].producer_rb = rb;	
+		ctx[i].numConsumers = num_consumers;
 		pthread_create(&tids[i], NULL, consumer_thread, &ctx[i]);
 	}
 

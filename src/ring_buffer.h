@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <string.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 typedef struct so_ring_buffer_t {
 	char *data;

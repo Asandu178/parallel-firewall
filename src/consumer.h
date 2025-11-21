@@ -6,11 +6,27 @@
 #include "ring_buffer.h"
 #include "packet.h"
 
+#define THRESHOLD 256
+
 typedef struct so_consumer_ctx_t {
 	struct so_ring_buffer_t *producer_rb;
 	int fd;
+	int numConsumers;
+	int finishedCOnsumers;
     /* TODO: add synchronization primitives for timestamp ordering */
 } so_consumer_ctx_t;
+
+// used to pass remaining logs to firewall.c
+extern logInfo_t *logs;
+
+// used to pass remaining log cnts to firewall.c
+extern int cnt;
+
+// used to pass the fd to firewall.c
+extern int fd;
+
+// used for qsort based on timers
+int cmp(const void *p1, const void *p2);
 
 int create_consumers(pthread_t *tids,
 					int num_consumers,

@@ -28,6 +28,12 @@ typedef struct __packed so_packet_t {
 	char payload[PKT_SZ - sizeof(so_hdr_t)];
 } so_packet_t;
 
+typedef struct logInfo_t {
+	unsigned long timestamp;
+	unsigned long hash;
+	int action;
+} logInfo_t;
+
 unsigned long packet_hash(const so_packet_t *pkt);
 so_action_t process_packet(const so_packet_t *pkt);
 
