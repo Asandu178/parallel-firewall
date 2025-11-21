@@ -33,7 +33,6 @@ ssize_t ring_buffer_enqueue(so_ring_buffer_t *ring, void *data, size_t size)
 	if (ring == NULL || data == NULL || size == 0)
 		return -1;
 
-		
 	pthread_mutex_lock(&ring->lock);
 
 	char *byte = (char*)data;
@@ -41,7 +40,6 @@ ssize_t ring_buffer_enqueue(so_ring_buffer_t *ring, void *data, size_t size)
 	// not enough space to write but the ring hasnt stopped so we wait
 	while((ring->cap - ring->len < size) && !ring->stopped)
 		pthread_cond_wait(&ring->notFull, &ring->lock);
-	
 	// ring stopped so we stop
 	if (ring->stopped || ring->cap < size) {
 		pthread_mutex_unlock(&ring->lock);
@@ -79,14 +77,11 @@ ssize_t ring_buffer_dequeue(so_ring_buffer_t *ring, void *data, size_t size)
 	// waiting until we have enough to read as the ring is not stopped
 	while (ring->len < size && !ring->stopped)
 		pthread_cond_wait(&ring->notEmpty, &ring->lock);
-	
-
 	// if ring stops we also stop
 	if (ring->stopped && ring->len == 0) {
 		pthread_mutex_unlock(&ring->lock);
 		return -1;
 	}
-		
 
 	for (size_t i = 0 ; i < size ; i++) {
 		*byte = ring->data[ring->read_pos];
@@ -112,7 +107,6 @@ void ring_buffer_destroy(so_ring_buffer_t *ring)
 	ring->cap = 0;
 	ring->write_pos = 0;
 	ring->read_pos = 0;
-	
 	free(ring->data);
 	ring->data = NULL;
 }

@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
+#include "consumer.h"
 #include <pthread.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdatomic.h>
 
-#include "consumer.h"
 #include "ring_buffer.h"
 #include "packet.h"
 #include "utils.h"
-#include <stdatomic.h>
 
 
 int cmp(const void *p1, const void *p2) {
@@ -27,7 +27,6 @@ pthread_cond_t waitForElement = PTHREAD_COND_INITIALIZER;
 int cnt = 0;
 
 void addLogInfo(logInfo_t log) {
-
 	pthread_mutex_lock(&lock);
 
 	logs[cnt++] = log;
@@ -37,13 +36,12 @@ void addLogInfo(logInfo_t log) {
 	}
 
 	pthread_mutex_unlock(&lock);
-	
 }
 
-void logHandler(void *args) {
-
+void* logHandler(void *argv) {
 	size_t len;
 	char out_buf[256];
+	(void) argv;
 
 	// waits until we have enough logs or we have finished all consumers
 	while (1) {
@@ -79,19 +77,19 @@ void logHandler(void *args) {
 				write(ctx.fd, out_buf, len);
 		}
 	}
+
+	return NULL;
 }
 
-void consumer_thread(void *argv)
+void* consumer_thread(void *argv)
 {
 	/* TODO: implement consumer thread */
 	so_packet_t pkt;
-	ssize_t sz;
-	char out_buf[PKT_SZ];
-
+	ssize_t r;
+	(void) argv;
 
 	while (1) {
-		ssize_t r = ring_buffer_dequeue(ctx.producer_rb, &pkt, PKT_SZ);
-
+		r = ring_buffer_dequeue(ctx.producer_rb, &pkt, PKT_SZ);
 
 		// if thread is finished
 		if (r == -1) {
@@ -106,8 +104,8 @@ void consumer_thread(void *argv)
 		log.hash = packet_hash(&pkt);
 		log.timestamp = pkt.hdr.timestamp;
 		addLogInfo(log);
-
 	}
+	return NULL;
 }
 
 int create_consumers(pthread_t *tids,
@@ -115,7 +113,6 @@ int create_consumers(pthread_t *tids,
 					 struct so_ring_buffer_t *rb,
 					 const char *out_filename)
 {
-
 	ctx.fd = open(out_filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
 	ctx.producer_rb = rb;
 	ctx.numConsumers = num_consumers;
