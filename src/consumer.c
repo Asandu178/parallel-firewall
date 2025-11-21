@@ -92,9 +92,11 @@ void *consumer_thread(void *argv)
 
 		// if thread is finished
 		if (r == -1) {
-			atomic_fetch_add(&ctx.finishedConsumers, 1);
+			pthread_mutex_lock(&lock);
+			ctx.finishedConsumers++;
 			if (ctx.finishedConsumers == ctx.numConsumers)
 				pthread_cond_signal(&waitForElement);
+			pthread_mutex_unlock(&lock);
 			break;
 		}
 
@@ -116,7 +118,7 @@ int create_consumers(pthread_t *tids,
 	ctx.fd = open(out_filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
 	ctx.producer_rb = rb;
 	ctx.numConsumers = num_consumers;
-	atomic_init(&ctx.finishedConsumers, 0);
+	ctx.finishedConsumers = 0;
 	cnt = 0;
 
 	logs = malloc(sizeof(logInfo_t) * 300);

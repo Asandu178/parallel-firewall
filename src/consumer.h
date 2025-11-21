@@ -5,7 +5,6 @@
 
 #include "ring_buffer.h"
 #include "packet.h"
-#include <stdatomic.h>
 
 #define THRESHOLD 200
 
@@ -13,7 +12,7 @@ typedef struct so_consumer_ctx_t {
 	struct so_ring_buffer_t *producer_rb;
 	int fd;
 	int numConsumers;
-	atomic_int finishedConsumers;
+	int finishedConsumers;
     /* TODO: add synchronization primitives for timestamp ordering */
 } so_consumer_ctx_t;
 
