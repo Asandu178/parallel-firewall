@@ -4,7 +4,6 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <stdatomic.h>
 
 #include "ring_buffer.h"
 #include "packet.h"
@@ -117,7 +116,7 @@ int create_consumers(pthread_t *tids,
 	ctx.fd = open(out_filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
 	ctx.producer_rb = rb;
 	ctx.numConsumers = num_consumers;
-	ctx.finishedConsumers = 0;
+	atomic_init(&ctx.finishedConsumers, 0);
 	cnt = 0;
 
 	logs = malloc(sizeof(logInfo_t) * 300);
