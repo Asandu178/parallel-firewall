@@ -48,8 +48,6 @@ void *logHandler(void *argv)
 		while (cnt < THRESHOLD && ctx.numConsumers != ctx.finishedConsumers)
 			pthread_cond_wait(&waitForElement, &lock);
 
-		// acquire lock
-
 		if (ctx.numConsumers == ctx.finishedConsumers) {
 			pthread_mutex_unlock(&lock);
 			break;
@@ -121,7 +119,7 @@ int create_consumers(pthread_t *tids,
 	ctx.finishedConsumers = 0;
 	cnt = 0;
 
-	logs = malloc(sizeof(logInfo_t) * 300);
+	logs = malloc(sizeof(logInfo_t) * THRESHOLD * 2);
 
 	int i;
 

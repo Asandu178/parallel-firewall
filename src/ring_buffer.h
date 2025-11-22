@@ -20,9 +20,8 @@ typedef struct so_ring_buffer_t {
 	int stopped;
 
 	pthread_mutex_t lock;
-	pthread_cond_t notEmpty;
-	pthread_cond_t notFull;
-	pthread_mutex_t locklog;
+	sem_t emptySlots;
+	sem_t fullSlots;
 
 
 	/* TODO: Add syncronization primitives */
