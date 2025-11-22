@@ -9,17 +9,19 @@
 #include "packet.h"
 #include "utils.h"
 // variable to know how much of the max i should keep from last log iter
-#define OVERLAP (THRESHOLD * 0.3)
+#define OVERLAP (THRESHOLD * 4 / 10)
 
 
 int cmp(const void *p1, const void *p2)
 {
-    const logInfo_t *a = p1;
-    const logInfo_t *b = p2;
-    
-    if (a->timestamp < b->timestamp) return -1;
-    if (a->timestamp > b->timestamp) return 1;
-    return 0;
+	logInfo_t *a = (logInfo_t *)p1;
+	logInfo_t *b = (logInfo_t *)p2;
+
+	if (a->timestamp < b->timestamp)
+		return -1;
+	if (a->timestamp > b->timestamp)
+		return 1;
+	return 0;
 }
 
 logInfo_t *logs;
@@ -36,18 +38,20 @@ void addLogInfo(logInfo_t log)
 {
 	pthread_mutex_lock(&lock);
 
+	// check if we already have processed all consumers and signal writer to flush last logs
 	if (ctx.numConsumers == ctx.finishedConsumers)
 		pthread_cond_signal(&waitForElement);
 
+	// wait until we can insert new log
 	while (cnt >= THRESHOLD)
 		pthread_cond_wait(&waitForInsert, &lock);
 
-	printf("BEFORE: Adding log #%d with timestamp %lu\n", cnt, log.timestamp);
+	// insert the new log
 	logs[cnt++] = log;
-	printf("AFTER: cnt now = %d\n", cnt);
 
 	DIE(cnt > THRESHOLD, "THRESHOLD");
 
+	// signal writer to flush current logs
 	if (cnt == THRESHOLD)
 		pthread_cond_signal(&waitForElement);
 
@@ -71,30 +75,33 @@ void *logHandler(void *argv)
 			break;
 		}
 
+		// sort logs
 		qsort(logs, cnt, sizeof(logInfo_t), cmp);
 
+		// count how may new logs we have
 		int writeCnt = 0;
 		if (cnt > OVERLAP)
 			writeCnt = cnt - OVERLAP;
 
+		// write logs to file
 		for (int i = 0 ; i < writeCnt ; i++) {
 			len = snprintf(out_buf, 256, "%s %016lx %lu\n",
 			RES_TO_STR(logs[i].action), logs[i].hash, logs[i].timestamp);
 			write(ctx.fd, out_buf, len);
 		}
 
+		// have the overlap be moved to the beginning of the logs vector
 		if (cnt > OVERLAP) {
 			memmove(logs, logs + writeCnt, OVERLAP * sizeof(logInfo_t));
+			// set cnt as to insert new entries after the overlapped logs
 			cnt = OVERLAP;
 		}
 
 		pthread_cond_broadcast(&waitForInsert);
-
 		DIE(pthread_mutex_unlock(&lock) != 0, "Mutex unlock failed");
 	}
 
 	pthread_mutex_lock(&lock);
-
 	if (cnt > 0) {
 		qsort(logs, cnt, sizeof(logInfo_t), cmp);
 		for (int i = 0 ; i < cnt ; i++) {
@@ -103,7 +110,6 @@ void *logHandler(void *argv)
 				write(ctx.fd, out_buf, len);
 		}
 	}
-
 	pthread_mutex_unlock(&lock);
 
 	return NULL;
