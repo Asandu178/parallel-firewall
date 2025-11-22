@@ -12,7 +12,12 @@
 
 int cmp(const void *p1, const void *p2)
 {
-	return ((*(logInfo_t *)p1).timestamp - (*(logInfo_t *)p2).timestamp);
+    const logInfo_t *a = p1;
+    const logInfo_t *b = p2;
+    
+    if (a->timestamp < b->timestamp) return -1;
+    if (a->timestamp > b->timestamp) return 1;
+    return 0;
 }
 
 logInfo_t *logs;
@@ -28,6 +33,9 @@ int cnt;
 void addLogInfo(logInfo_t log)
 {
 	pthread_mutex_lock(&lock);
+
+	if (ctx.numConsumers == ctx.finishedConsumers)
+		pthread_cond_signal(&waitForElement);
 
 	while (cnt >= THRESHOLD)
 		pthread_cond_wait(&waitForInsert, &lock);
@@ -75,6 +83,8 @@ void *logHandler(void *argv)
 		DIE(pthread_mutex_unlock(&lock) != 0, "Mutex unlock failed");
 	}
 
+	pthread_mutex_lock(&lock);
+
 	if (cnt > 0) {
 		qsort(logs, cnt, sizeof(logInfo_t), cmp);
 		for (int i = 0 ; i < cnt ; i++) {
@@ -83,6 +93,8 @@ void *logHandler(void *argv)
 				write(ctx.fd, out_buf, len);
 		}
 	}
+
+	pthread_mutex_unlock(&lock);
 
 	return NULL;
 }

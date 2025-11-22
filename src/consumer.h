@@ -6,7 +6,7 @@
 #include "ring_buffer.h"
 #include "packet.h"
 
-#define THRESHOLD 250
+#define THRESHOLD 500
 
 typedef struct so_consumer_ctx_t {
 	struct so_ring_buffer_t *producer_rb;
