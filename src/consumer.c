@@ -21,6 +21,7 @@ so_consumer_ctx_t ctx;
 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t waitForElement = PTHREAD_COND_INITIALIZER;
+pthread_cond_t waitForInsert = PTHREAD_COND_INITIALIZER;
 
 int cnt;
 
@@ -28,7 +29,14 @@ void addLogInfo(logInfo_t log)
 {
 	pthread_mutex_lock(&lock);
 
+	while (cnt >= THRESHOLD)
+		pthread_cond_wait(&waitForInsert, &lock);
+
+	printf("BEFORE: Adding log #%d with timestamp %lu\n", cnt, log.timestamp);
 	logs[cnt++] = log;
+	printf("AFTER: cnt now = %d\n", cnt);
+
+	DIE(cnt > THRESHOLD, "THRESHOLD");
 
 	if (cnt == THRESHOLD)
 		pthread_cond_signal(&waitForElement);
@@ -44,12 +52,12 @@ void *logHandler(void *argv)
 
 	// waits until we have enough logs or we have finished all consumers
 	while (1) {
-		pthread_mutex_lock(&lock);
+		DIE(pthread_mutex_lock(&lock) != 0, "Mutex lock failed");
 		while (cnt < THRESHOLD && ctx.numConsumers != ctx.finishedConsumers)
 			pthread_cond_wait(&waitForElement, &lock);
 
 		if (ctx.numConsumers == ctx.finishedConsumers) {
-			pthread_mutex_unlock(&lock);
+			DIE(pthread_mutex_unlock(&lock) != 0, "Mutex unlock failed");
 			break;
 		}
 
@@ -62,8 +70,9 @@ void *logHandler(void *argv)
 		}
 
 		cnt = 0;
+		pthread_cond_broadcast(&waitForInsert);
 
-		pthread_mutex_unlock(&lock);
+		DIE(pthread_mutex_unlock(&lock) != 0, "Mutex unlock failed");
 	}
 
 	if (cnt > 0) {
@@ -90,11 +99,11 @@ void *consumer_thread(void *argv)
 
 		// if thread is finished
 		if (r == -1) {
-			pthread_mutex_lock(&lock);
+			DIE(pthread_mutex_lock(&lock) != 0, "Mutex lock failed");
 			ctx.finishedConsumers++;
 			if (ctx.finishedConsumers == ctx.numConsumers)
 				pthread_cond_signal(&waitForElement);
-			pthread_mutex_unlock(&lock);
+			DIE(pthread_mutex_unlock(&lock) != 0, "Mutex unlock failed");
 			break;
 		}
 
@@ -127,10 +136,10 @@ int create_consumers(pthread_t *tids,
 		/*
 		 * TODO: Launch consumer threads
 		 **/
-		pthread_create(&tids[i], NULL, consumer_thread, NULL);
+		DIE(pthread_create(&tids[i], NULL, consumer_thread, NULL) != 0, "Error creating consumer threads");
 	}
 
-	pthread_create(&tids[i], NULL, logHandler, NULL);
+	DIE(pthread_create(&tids[i], NULL, logHandler, NULL) != 0, "Error creating writer thread");
 
 	return num_consumers;
 }
