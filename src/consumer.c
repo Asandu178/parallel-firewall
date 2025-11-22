@@ -8,6 +8,8 @@
 #include "ring_buffer.h"
 #include "packet.h"
 #include "utils.h"
+// variable to know how much of the max i should keep from last log iter
+#define OVERLAP (THRESHOLD * 0.3)
 
 
 int cmp(const void *p1, const void *p2)
@@ -71,13 +73,21 @@ void *logHandler(void *argv)
 
 		qsort(logs, cnt, sizeof(logInfo_t), cmp);
 
-		for (int i = 0 ; i < cnt ; i++) {
+		int writeCnt = 0;
+		if (cnt > OVERLAP)
+			writeCnt = cnt - OVERLAP;
+
+		for (int i = 0 ; i < writeCnt ; i++) {
 			len = snprintf(out_buf, 256, "%s %016lx %lu\n",
 			RES_TO_STR(logs[i].action), logs[i].hash, logs[i].timestamp);
 			write(ctx.fd, out_buf, len);
 		}
 
-		cnt = 0;
+		if (cnt > OVERLAP) {
+			memmove(logs, logs + writeCnt, OVERLAP * sizeof(logInfo_t));
+			cnt = OVERLAP;
+		}
+
 		pthread_cond_broadcast(&waitForInsert);
 
 		DIE(pthread_mutex_unlock(&lock) != 0, "Mutex unlock failed");
