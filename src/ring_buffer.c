@@ -46,14 +46,7 @@ ssize_t ring_buffer_enqueue(so_ring_buffer_t *ring, void *data, size_t size)
         return -1;
     }
 
-    // Single memcpy operation
-    size_t first_chunk = ring->cap - ring->write_pos;
-    if (first_chunk >= PACKAGE_SIZE) {
-        memcpy(ring->data + ring->write_pos, data, PACKAGE_SIZE);
-    } else {
-        memcpy(ring->data + ring->write_pos, data, first_chunk);
-        memcpy(ring->data, (char*)data + first_chunk, PACKAGE_SIZE - first_chunk);
-    }
+	memcpy(ring->data + ring->write_pos, data, PACKAGE_SIZE);
 
     ring->write_pos = (ring->write_pos + PACKAGE_SIZE) % ring->cap;
     ring->len += PACKAGE_SIZE;
@@ -84,14 +77,7 @@ ssize_t ring_buffer_dequeue(so_ring_buffer_t *ring, void *data, size_t size)
         return -1;
     }
 
-    // Single memcpy operation
-    size_t first_chunk = ring->cap - ring->read_pos;
-    if (first_chunk >= PACKAGE_SIZE) {
-        memcpy(data, ring->data + ring->read_pos, PACKAGE_SIZE);
-    } else {
-        memcpy(data, ring->data + ring->read_pos, first_chunk);
-        memcpy((char*)data + first_chunk, ring->data, PACKAGE_SIZE - first_chunk);
-    }
+	memcpy((char*)data, ring->data + ring->read_pos, PACKAGE_SIZE);
 
     ring->read_pos = (ring->read_pos + PACKAGE_SIZE) % ring->cap;
     ring->len -= PACKAGE_SIZE;
