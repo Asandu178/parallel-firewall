@@ -80,7 +80,7 @@ void *logHandler(void *argv)
 
 		// count how may new logs we have
 		int writeCnt = 0;
-		
+
 		if (cnt > OVERLAP)
 			writeCnt = cnt - OVERLAP;
 

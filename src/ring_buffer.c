@@ -28,9 +28,7 @@ DIE(size != PACKAGE_SIZE, "Invalid package size");
 DIE(sem_wait(&ring->emptySlots) != 0, "Error sem wait");
 DIE(pthread_mutex_lock(&ring->lock) != 0, "Mutex lock failed");
 if (ring->stopped) {
-DIE(pthread_mutex_unlock(&ring->lock) != 0, "Mutex unlock failed");
-DIE(sem_post(&ring->emptySlots) != 0, "SEMPOST");
-return -1;
+DIE(pthread_mutex_unlock(&ring->lock) != 0, "Mutex unlock failed"); DIE(sem_post(&ring->emptySlots) != 0, "SEMPOST"); return -1;
 }
 memcpy(ring->data + ring->write_pos, data, PACKAGE_SIZE);
 ring->write_pos = (ring->write_pos + PACKAGE_SIZE) % ring->cap;
@@ -46,9 +44,7 @@ DIE(size != PACKAGE_SIZE, "Invalid package size");
 DIE(sem_wait(&ring->fullSlots) != 0, "Error sem wait");
 DIE(pthread_mutex_lock(&ring->lock) != 0, "Mutex lock failed");
 if (ring->stopped && ring->len == 0) {
-DIE(pthread_mutex_unlock(&ring->lock) != 0, "Mutex unlock failed");
-DIE(sem_post(&ring->fullSlots) != 0, "SEMPOST");
-return -1;
+DIE(pthread_mutex_unlock(&ring->lock) != 0, "Mutex unlock failed"); DIE(sem_post(&ring->fullSlots) != 0, "SEMPOST"); return -1;
 }
 memcpy((char *)data, ring->data + ring->read_pos, PACKAGE_SIZE);
 ring->read_pos = (ring->read_pos + PACKAGE_SIZE) % ring->cap;
